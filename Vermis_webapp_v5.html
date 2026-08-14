@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+<title>A corpse kneels beside a well — Character Creator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-monospace,"Courier New",monospace;background:#000;color:#fff;font-size:14px;line-height:1.5}
+header{border-bottom:2px solid #fff;padding:14px 18px}
+h1{font-size:18px;letter-spacing:2px;text-transform:uppercase}
+.sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#ccc}
+.toolbar{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid #fff;position:sticky;top:0;background:#000;z-index:10}
+.tabs button{font:inherit;font-size:12px;background:#000;color:#fff;border:none;border-right:1px solid #fff;border-bottom:1px solid #fff;padding:10px 14px;cursor:pointer;text-transform:uppercase;letter-spacing:1px}
+.tabs button:hover{background:#222}
+.tabs button.active{background:#fff;color:#000}
+main{padding:18px;max-width:1100px;margin:0 auto 60px}
+section.tab{display:none}
+section.tab.show{display:block}
+.panel{border:1px solid #fff;padding:14px;margin-bottom:16px}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #fff;padding-bottom:6px;margin-bottom:10px}
+.panel h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px;border-bottom:1px dashed #fff;padding-bottom:2px}
+.btn{font:inherit;font-size:11px;border:1px solid #fff;background:#000;color:#fff;padding:5px 9px;cursor:pointer;text-transform:uppercase;letter-spacing:1px}
+.btn:hover{background:#fff;color:#000}
+.btn.sel{background:#fff;color:#000}
+input,textarea,select{font:inherit;border:1px solid #fff;background:#000;color:#fff;padding:6px}
+.grid{display:grid;gap:8px}
+.classgrid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr))}
+.classgrid .btn{white-space:normal;text-align:left;min-height:42px}
+.two-col{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;align-items:start}
+@media(max-width:850px){.two-col{grid-template-columns:1fr}}
+.box{width:16px;height:16px;border:1px solid #fff;background:#000;display:inline-block;padding:0;cursor:pointer;margin:1px 3px 1px 0;vertical-align:middle}
+.box.on{background:#fff}
+.boxs{width:12px;height:12px;border:1px solid #fff;display:inline-block;margin:1px 3px 1px 0;vertical-align:middle}
+.boxs.on{background:#fff}
+.barlabel{display:inline-block;min-width:150px;text-transform:uppercase;font-size:11px;letter-spacing:1px}
+.barline{margin:6px 0}
+.small{font-size:11px;color:#ccc}
+ul{margin-left:18px}
+.item{border:1px solid #fff;padding:8px;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.godcard{border:1px solid #fff;padding:10px;margin-bottom:8px;cursor:pointer}
+.godcard:hover{background:#222}
+.godcard.sel{background:#fff;color:#000}
+.godcard.sel .small{color:#333}
+.spellcard{border:1px solid #fff;padding:8px;margin-bottom:6px;cursor:pointer}
+.spellcard:hover{background:#222}
+.spellcard.picked{background:#fff;color:#000}
+.spellcard.picked .small{color:#333}
+.spellcard.fixed{border-style:dashed;cursor:default}
+.spellcard.fixed:hover{background:#000}
+.spellentry{border-bottom:1px dashed #fff;padding-bottom:6px;margin-bottom:6px}
+footer#strip{position:fixed;bottom:0;left:0;right:0;background:#000;border-top:2px solid #fff;padding:8px 18px;font-size:12px;letter-spacing:1px;display:flex;gap:16px;flex-wrap:wrap;z-index:20}
+table.rules{border-collapse:collapse;width:100%}
+table.rules td,table.rules th{border:1px solid #fff;padding:6px;font-size:12px;text-align:left;vertical-align:top}
+
+/* Print styles revert to white background/black text so you don't waste printer ink */
+@media print{
+ .tabs,header .toolbar,footer#strip,.no-print{display:none!important}
+ section.tab{display:none!important}
+ section#tab-sheet{display:block!important}
+ body{font-size:12px;background:#fff!important;color:#000!important}
+ main{margin-bottom:0}
+ .panel{break-inside:avoid;border-color:#000!important}
+ .panel h2,.panel h3,.spellentry{border-color:#000!important}
+ .box,.boxs{border-color:#000!important}
+ .box.on,.boxs.on{background:#000!important}
+ .btn{border-color:#000!important;background:#fff!important;color:#000!important}
+ .item{border-color:#000!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>A corpse kneels beside a well</h1>
+  <div class="sub">Character Creator &amp; Character Sheet</div>
+  <div class="toolbar no-print">
+    <label class="small">NAME&nbsp;<input id="charName" style="width:220px"></label>
+    <button class="btn" onclick="printSheet()">Print sheet</button>
+    <button class="btn" onclick="exportJSON()">Export JSON</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">Import JSON</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
+    <button class="btn" onclick="resetAll()">Reset</button>
+  </div>
+</header>
+
+<nav class="tabs no-print">
+  <button data-tab="class" class="active">1 · Class</button>
+  <button data-tab="stats">2 · Stats &amp; Bars</button>
+  <button data-tab="god">3 · God</button>
+  <button data-tab="spells">4 · Spells</button>
+  <button data-tab="inventory">5 · Inventory</button>
+  <button data-tab="sheet">6 · Sheet</button>
+  <button data-tab="rules">7 · Rules</button>
+</nav>
+
+<main>
+
+<section class="tab show" id="tab-class">
+  <div class="two-col">
+    <div class="panel"><h2>Select class</h2><div id="classList" class="grid classgrid"></div></div>
+    <div class="panel" id="classDetail"></div>
+  </div>
+</section>
+
+<section class="tab" id="tab-stats">
+  <div id="statsArea"></div>
+</section>
+
+<section class="tab" id="tab-god">
+  <div class="panel">
+    <h2>Choose a God and receive blessing and favor. Or walk without divine intervention.</h2>
+    <div id="godList"></div>
+  </div>
+</section>
+
+<section class="tab" id="tab-spells">
+  <div id="spellArea"></div>
+</section>
+
+<section class="tab" id="tab-inventory">
+  <div id="invArea"></div>
+</section>
+
+<section class="tab" id="tab-sheet">
+  <div id="sheetArea"></div>
+</section>
+
+<section class="tab" id="tab-rules">
+  <div class="panel"><h2>D12 roller</h2>
+    <select id="rollMode"><option value="n">Normal</option><option value="a">Advantage</option><option value="d">Disadvantage</option></select>
+    <label class="small">&nbsp;stat level&nbsp;<input id="rollBonus" type="number" value="0" style="width:70px"></label>
+    <button class="btn" onclick="doRoll()">Roll d12</button>
+    <div id="rollOut" style="margin-top:8px"></div>
+  </div>
+  <div class="panel"><h2>Rolls</h2>
+    <p>When you attempt something that has risk involved, you roll a d12, adding your level in the corresponding stat. If the die lands on a 12, you roll again and add the second roll. On a 1, you roll again and subtract it.</p>
+    <p>If you fail the attempt, you gain a point to the corresponding bar, and you must find a different way to face the interaction.</p>
+    <p>If you have advantage on a roll, you roll twice and take the higher result. With disadvantage, you roll twice and take the lowest.</p>
+  </div>
+  <div class="panel"><h2>Combat</h2>
+    <p>When combat is initiated, all parties roll a will check, then take actions in order of highest to lowest roll.</p>
+    <p>On your turn, you take one action, and you may spend a stamina to take a second action.</p>
+    <p>Along with each action, you may move up to twenty feet.</p>
+    <p>As an action, you can use an item, make an attack, cast a spell, or ready yourself, allowing you to dodge without spending a stamina for the next attack you receive.</p>
+    <p>When you make a physical attack, you roll a strength check, opposed by the target's will check.</p>
+    <p>On a success, you deal the given amount of damage, and regain a point to a bar of your choice.</p>
+  </div>
+  <div class="panel"><h2>Storage &amp; rest</h2>
+    <p>You also have 4 slots of storage that can each hold an object of a reasonable weight. This storage can be increased by acquiring extra storage equipment. At the beginning of the game you gain all of the starting equipment listed under your class. Worn items and items of negligible weight don't take up a slot.</p>
+    <p>In order to regain health, you must not do any strenuous activity for 12 hours, after which you regain 1d6 health, armor, or bar points (of your choice).</p>
+    <p>Along with the gear in your class, everyone starts with a waterskin, d4 days worth of food and items you roll for. Roll once per table:</p>
+    <table class="rules" style="margin-top:8px"><tr><th>d12 — Table I</th><th>d12 — Table II</th></tr>
+    <tr><td id="rt1"></td><td id="rt2"></td></tr></table>
+  </div>
+  <div class="panel"><h2>Spells</h2><div id="spellRef"></div></div>
+</section>
+
+</main>
+
+<footer id="strip" class="no-print"></footer>
+
+<script>
+/* ============ DATA ============ */
+const STATS=['STR','INT','FAI','WIL'];
+const STATNAMES={STR:'Strength',INT:'Intelligence',FAI:'Faith',WIL:'Will'};
+const KEY='ackbw-character';
+
+const SPELLS=[
+{id:'death-mask',name:'Death Mask',cost:1,text:"You touch a corpse and the face peels off like a mask, while the rest of the corpse quickly rots into dust. When you wear the mask, you will look and sound like the person whose face you're wearing (does not work on animals, spirits, or constructs). The mask will rot into uselessness after one day. If you spend 4 Mana to cast this spell, it instead lasts forever."},
+{id:'death-scythe',name:'Death Scythe',cost:2,text:"You pluck a black scythe from a corpse's center of mass. It is a d8 weapon that deals double damage to creatures of the same type as the corpse. (For example, a scythe made from a troll corpse would deal double damage to trolls.) The scythe lasts until the body reveals its bones."},
+{id:'disguise',name:'Disguise',cost:3,text:"You cloak an object smaller than a horse in illusion, making it appear as another object of the same type. An apple could be disguised as any other type of fruit; a table could be disguised as any other type of furniture. This only extends to the visual properties of the object (not voice, smell, etc)."},
+{id:'doom-song',name:'Doom Song',cost:1,text:"A targeted creature takes d4 damage. On each subsequent turn, the damage increases by +1d4 and repeats (this stacks). This spell ends if the target moves out of line of sight, if you take any damage, or have a major distraction."},
+{id:'essential-salt',name:'Essential Salt',cost:3,text:"You reduce a corpse into a coarse grit that can be stored in a tiny pouch or vial. You can speak with the spirit of the corpse by pouring the salt out on a flat surface and blowing it into the air; be mindful it doesn't get mixed in with mundane sand."},
+{id:'fade',name:'Fade',cost:2,text:"A target humanoid or small object phases out, and becomes unable to affect the world in any way except visually. It floats like an illusion until you move."},
+{id:'false-life',name:'False Life',cost:3,text:"Creature is healed for 1d4+1 HP. Creatures healed in this way gain the Curse of False Life, and cannot regain HP by any means for a number of days equal to the health gained."},
+{id:'fear',name:'Fear',cost:1,text:"A creature becomes Afraid of you for a number of rounds equal to the Mana spent. They take 1d6 non-lethal damage when they approach or attack the object of their Fear. Fearful creatures can spend an action focusing to reduce the rounds left by 1d4."},
+{id:'fireball',name:'Fireball',cost:3,text:"You throw a marble of magic, after one round it detonates and does 3d6 fire damage to all objects within 20ft."},
+{id:'knock',name:'Knock',cost:1,text:"An object is opened. Doors are flung wide, locks are broken, shackles are bent open, belts come undone. Worn armor falls off if the wearer fails a strength save."},
+{id:'levitate',name:'Levitate',cost:2,text:"You will an object to raise, lower, or hover. You can move the object horizontally, but not more than 10' per turn. The object falls if it moves out of line of sight or you are distracted."},
+{id:'illusion',name:'Illusion',cost:2,text:"You create an illusion of whatever object or creature you want. It can move as long however you dictate, but it cannot make any sound, smell, or be touched."},
+{id:'light',name:'Light',cost:1,text:"An object illuminates within 20'. With a successful attack roll, you can touch a creature's face, blinding them with glare."},
+{id:'mage-armor',name:'Mage Armor',cost:1,text:"Target's Armor improves +1 for each Mana spent. This armor cannot be repaired, and you cannot cast this spell on them until all the armor has been spent."},
+{id:'magic-missile',name:'Magic Missile',cost:1,text:"Target takes 1d4 damage, no save."},
+{id:'revenant',name:'Revenant',cost:4,text:"A dead creature immediately returns to life as an undead, but this does not repair their corpse. Their max health is halved. At next dawn, they disintegrate."},
+{id:'rot',name:'Rot',cost:3,text:"Spellcasting attack roll, on hit creatures take 3d6 magic damage and age a number of years equal to the damage. If an object is targeted it ages similarly. Books sprout into mold, wood becomes soggy, lamps run out of fuel and grow cold, but stone is unaffected."},
+{id:'scry',name:'Scry',cost:4,text:"You conjure a disembodied floating eye to a point you designate. You do not have to have line of sight. As long as you hold concentration, you can see through the eye. If you use a valuable crystal when casting this spell, you hear and speak through the eye."},
+{id:'speak-with-dead',name:'Speak With Dead',cost:3,text:"You can converse with any corpse that has an intact jaw. The words of the dead tend to be cryptic and unhelpful, especially if the creature has no reason to help you. You can only converse with each corpse once."},
+{id:'apparition',name:'Apparition',cost:3,text:"For as long as you concentrate, you can see invisible things, through illusions, like a slight warping of light. You know where and how large an invisible thing is, but nothing else. You can also tell if someone else is a spellcaster by looking them in the eyes. Due to the stain of looking beyond where you are supposed to, you suffer Dread for 3 days."}
+];
+
+const GODS=[
+{id:'ghylak',name:'Ghylak the Cursed',title:'the God of Death',text:"Those who accept the Vengeful One's blessing receive the curse inflicted on it by their fellow God. This allows the blessed to reattach severed body parts like the follower who gave up her own head for Ghylak to use. However, the replacement limb can never be their own. And must be of another."},
+{id:'dorvus',name:'Dorvus',title:'the God of Truth & Enlightenment',text:"Those who receive the Bejeweled Skeleton's blessing find their eyes glisten like gemstones and reflect like mirrors. These eyes grant the blessed the ability to see through illusions, and to translate foreign written language. However, the truth can be unwarranted and harmful to the mind."},
+{id:'murgo',name:'Murgo the Relentless',title:'the God of Forests',text:"Those who receive the Shriveled Wood's blessing have their blood greatly blessed with miraculous healing and growth properties. If their blood is spilled on another's flesh wound, it will heal. However, like nature, even a single pint will continue to grow relentlessly if not pruned."},
+{id:'gurvek',name:'Gurvek the Great',title:'the God of Strength',text:"Those who receive the Golden Giant's blessing become emboldened with the strength of ten men. Their hair is given a golden yellow tint. However, this affects one's mind. It makes facing illusions and powers that target the mind incredibly straining."},
+{id:'marko',name:'Marko the Oracle',title:'the God of Prophecies',text:"Those who receive the Cloaked Soothsayer's blessing hear the whispers of the God's wisdom no matter where they find themselves, and Dreams filled with prophecies. Whatever they focus upon, Marko's voice will whisper information. In their dreams, events of the coming days will be shown, but often to the distress of the dreamer."},
+{id:'ketereth',name:'Ketereth the Wrath',title:'the God of Putrefaction',text:"Those who receive the Flaming Hive's blessing are afflicted with a special variant of White Hives. They become able to generate and manipulate the white hive afflictions. Life may crawl from the openings of blessed hives, and said putrid vermin can inflict White Hives upon their foes. However, like the Infected Prince, the blessed's own hives will flare faster and spread the more they are used. Less, and they will slowly retract."},
+{id:'none',name:'Walk without divine intervention',title:'',text:''}
+];
+
+const TABLE1=["Rope — 30 feet","Torches — (Presence+4)","Lantern — with oil for (Presence+6) hours","Magnesium strip","Random Unclean Scroll","Sharp Needle","Medicine Chest — 4 uses (heals d6 HP)","Metal File and Lockpicks","Bear Trap — (d8 damage)","Bomb — (Sealed bottle, d10 damage)","A Bottle of Red Poison — (d12 damage)","Silver Crucifix"];
+const TABLE2=["Life Elixir — d4 doses (+d6 HP, −infection)","Random Sacred Scroll","Small But Vicious Dog — (d6+2 HP, bite d4)","Creature — (d4+2 HP, punch/bite d4)","Exquisite Perfume — worth 25 Silver","Toolbox — 10 nails, tongs, hammer, small saw","Heavy Chain — 15 feet","Grappling Hook","Shield","Crowbar — (d4 damage)","Lard — may function as 5 meals in a pinch","Tent"];
+
+const CLASSES=[
+{id:'stone-scholar',name:'Stone Scholar',rec:{STR:0,INT:5,FAI:5,WIL:4},cast:{ability:'INT',count:3},
+desc:"Faces compressed against the stones tied to their heads, in constant pain but that sacrifice grants them infinite wisdom. Experts on mud sorcery, wicked smart and fragile body. A stoneless scholar is condemned to a miserable, pitiful life. Unable to see or smell due to the scars from the rocks that were tied to their faces for ages. Stripped of their knowledge and powers, they crawl in search of the enlightenment they lost.",
+gear:[{name:'Stone Staff',desc:"Staff made of tiny, merged rocks, used to help scholars walk and cast spells. d6 magic damage. Spellcasting — intelligence. 3 spells known."},{name:'Stone Bone',desc:"Shaped like a vertebra, this stone is inserted inside their backs as a sign of devotion."}]},
+{id:'waste-of-life',name:'Waste of Life',rec:{STR:1,INT:4,FAI:0,WIL:4},cast:null,
+desc:"Expelled from all the villages. Hated by everyone. Has been cursed multiple times and committed many crimes, but he shows no remorse. Some say that this individual is not a human at all, but the very embodiment of all our flaws, every single action is driven by its madness and greed. Has escaped from punishment many times, but never learned a lesson.",
+gear:[{name:'Beloved Necklace',desc:"Shiny necklace with the portrait of a young boy inside, probably stolen."},{name:'Bone Dagger',desc:"A dagger carved out of a long bone. d4 damage."}]},
+{id:'murk-sage',name:'Murk Sage',rec:{STR:1,INT:5,FAI:2,WIL:2},cast:{ability:'INT',count:2,fixed:['illusion']},
+desc:"They have incredible mind-twisting powers, they can create all kinds of illusions and play with their enemy's mind. The big metal head works as a catalyst to their powers. They're completely defenseless in the daylight. Murk sages are masters of the illusory arts, bending shadows to create all kinds of nightmares. When the darkness is gone, their power shrinks greatly, they can survive with the little darkness inside their helmets, but without shadows they're defenseless.",
+gear:[{name:'Sage Disciple',desc:"A Crosier which can also be used as a mace, depicts the visage of a Murk Sage. d6 damage. Spellcasting — intelligence. 2 spells + Illusion."},{name:'Moon Murder',desc:"Talisman for vanishing the moon for a night. When crushed, that same night will be pitch dark."}]},
+{id:'infant-seeker',name:'Infant Seeker',rec:{STR:0,INT:3,FAI:4,WIL:5},cast:{ability:'FAI',count:2},
+desc:"Mother on a quest to retrieve her lost child, taken from her by a witch. In these lands the young children disappear often, the birth rate is very low and witches are in a constant search for the precious delicacy. The loving mother will not rest until she meets with her child once again. Memories from brighter days are her source of determination, no matter how long and arduous the journey is, hope remains intact.",
+gear:[{name:'Mum Doll',desc:"A small doll made of grey hair. Spellcasting — faith. 2 spells."},{name:'Wicker Basket',desc:"Used to carry the ingredients she gathers for her meals."}]},
+{id:'lost-old-glory',name:'Lost Old Glory',rec:{STR:4,INT:3,FAI:1,WIL:2},cast:null,
+desc:"Once a hero now a lost soul without a purpose in life, where are their beloved ones, the people they once fought for? They stood against many indestructible horrors but always came back. Trapped in their memories, not able to process the past, the old glory wanders through the dark woods and forgotten villages trying to find a purpose in life.",
+gear:[{name:'Broken Badge',desc:"A symbol of pride and a reminder of the past."},{name:'Witch Tongue',desc:"Once separated from the witch, it can determine a nearby evil presence by vibrating."},{name:'Memoriam Blade',desc:"Often sheathed and rarely used for the deeds it once was. d10 damage."}]},
+{id:'wandering-angel',name:'Wandering Angel',rec:{STR:4,INT:1,FAI:5,WIL:1},cast:null,
+desc:"These devoted knights are on a journey to join their beloved goddess in death. They have to travel all the way to a sacred mountain and then pull the halo placed behind their helmets to decapitate themselves. Once they reach the peak of the sacred mountain, they will pull the halo and their decapitated heads will fall off the cliff. A pile of helmets full of rotten flesh lies on the other side of the mountain. Ghylak's servants are in charge of gathering all the equipment from the bodies and bringing it back to the temple.",
+gear:[{name:'Ghylak Statuette',desc:"Ghylak is often represented as a coiled snake with a woman's head."},{name:'Snake Fang',desc:"The angels pierce themselves with the fang to release a poison that makes them go berserk."},{name:"Angel's Scythe",desc:"Only to be used in self defense, to maintain the journey. d8 damage."}]},
+{id:'princesss-nail',name:"Princess's Nail",rec:{STR:2,INT:2,FAI:0,WIL:5},cast:null,
+desc:"Their loyalty knows no limits. They're all their princess's tools to achieve anything she wishes for, the crown's enemies, unattainable treasures, peace or war, they will accomplish it or die trying. The princess herself ties a lock of her hair to her loyal knights' swords so they can feel her presence and love within them in every battle. Committed to their princess's wishes, the nails don't ever question their duty.",
+gear:[{name:'Devotion Symbol',desc:"A long sword handle with a lock of hair tied tightly. d8 damage."},{name:'Bone Fermenter',desc:"A potion that makes one's bones extremely fragile."}]},
+{id:'mad-pricker',name:'Mad Pricker',rec:{STR:3,INT:3,FAI:2,WIL:2},cast:null,
+desc:"Their origins are yet unknown. Some say they're some kind of cult, others say they're mindless minions to an evil God. Armor full of deadly infected spikes, their handcuffs don't allow them to hold any weapons. Rumor has it that their helmets are actually full of spikes in the inside, so they may not be chaotic and hostile for the sake of it instead they're desperately seeking help, in a constant torture.",
+gear:[{name:'Iron Handcuffs',desc:"Covered with spikes, effective for melee combat and for protection against sharp weapons. d10 damage."}]},
+{id:'miner-knight',name:'Miner Knight',rec:{STR:4,INT:2,FAI:1,WIL:3},cast:null,
+desc:"These knights were born and raised in the pestilent mines, which granted them a very high tolerance to toxins and sicknesses. Their senses developed greatly, they can hear, smell and see almost like a creature of the night. The pestilent mines were once a place that provided materials and goods to the capital, the lower villages and occasionally knowledge for those who dig further in search of secrets from the old world.",
+gear:[{name:'Scented Oil',desc:"Fuel for the miner's lamp, slightly alleviates the smell of death."},{name:'Glowing Spores',desc:"Used in the mines to mark the forbidden paths."},{name:'Black Iron Flail',desc:"Made from metal only found in the pestilent mines. d10 damage."}]},
+{id:'rat-man',name:'Rat Man',rec:{STR:3,INT:2,FAI:0,WIL:1},cast:null,
+desc:"Become rat man. Rat man was once a man, afflicted by a curse, but with time, he ended up losing his humanity, no memories of the man he once was remains. He's been wandering in the capital's sewers for so many years that he became some sort of fable to scare children.",
+gear:[{name:'Beast Eye',desc:"Capable of ferociously tracking any prey in the dark."},{name:'Beast Tongue',desc:"Infected with numerous bacteria, a single bite can cause serious poisoning. d6 damage + poisoned."}]},
+{id:'cursed-fool',name:'Cursed Fool',rec:{STR:5,INT:2,FAI:3,WIL:4},cast:null,
+desc:"A brave warrior who faced a terrible loss. He found a mysterious whispering rock that told him the way to bring back his loved one from the dead. Since then, he's been a slave to the whispers. The Whisper is known to be the remains of an ancient statue. Its edges have been polished by the hands of those who have handled it with mistrust. Some say the stone's whispers will guide its owner to achieve their deepest desires, while others think that those who listen to the stone are cursed fools, slaves to its whispers.",
+gear:[{name:'STR Gauntlets',desc:"Enchanted gauntlets capable of greatly raising the owner's STR. d10 damage."},{name:'The Whisper',desc:"Legends are told about the whispering stone, only the people who desperately seek the unachievable can hear it."}]},
+{id:'prophet',name:'Prophet',rec:{STR:1,INT:2,FAI:5,WIL:3},cast:{ability:'FAI',count:3},
+desc:"The last member of a religion that was persecuted and eradicated by the crown. They worshipped the old world God that granted them countless miracles and showed them grim prophecies of a dark future. Marko, old world God shared his knowledge and prophecies with his devoted worshippers. Even though Marko was decapitated long ago, his mummified head can talk to those who know how to listen; eventually the visions started to show them a future full of death and decay.",
+gear:[{name:'Marko Effigy',desc:"Since Marko's head was defiled, the effigy is one of the few remaining images of the God."},{name:'Incense Bag',desc:"Contains incense used in prayers and purifying rituals. Spellcasting — faith. 3 spells."}]},
+{id:'daughter-of-ash',name:'The Daughter of Ash',rec:{STR:2,INT:4,FAI:1,WIL:4},cast:{ability:'INT',count:2},
+desc:"The Daughters of the Voika forest were raised to be one with the nature that surrounded them. Such was their harmony with the forest that most of them transcended their humanity. The remorse of having failed to protect her home when it needed her the most still gnaws at her conscience. “I am but a coward...” she repeats to herself over and over again.",
+gear:[{name:'Tear of the Voika',desc:"The last flower of the Voika forest. The life force of its carrier prevents it from wilting. In return, it only offers her melancholic memories. Spellcasting — intelligence. 2 spells."},{name:"Murgo's Seed",desc:"A seed from her God, capable of growing an entire forest within months."}]},
+{id:'the-vessel',name:'The Vessel',rec:{STR:1,INT:4,FAI:2,WIL:3},cast:{ability:'INT',count:2},
+desc:"Every time that the body of the Augur died, his followers transferred his soul into a newborn through a ritual, turning them into the new Vessel of the Augur. Sharing their vitality with another soul put a great strain on the Vessels' bodies, slowly withering them. Although the young man was destined to preach the Augur's visions to his people, he decided to run away and make his own paths.",
+gear:[{name:'Visage of the Augur',desc:"The Visage of the Augur had to be worn by the Vessels as if it were their own skin."},{name:'Soul of the Augur',desc:"After consuming a piece of Marko's flesh, the Augur received the gift of prophecy and started his own cult. Even though his body died long ago, he lives. Spellcasting — intelligence. 2 spells."}]},
+{id:'host-forbidden-blade',name:'The Host of the Forbidden Blade',rec:{STR:5,INT:1,FAI:0,WIL:1},cast:null,
+desc:"For generations, the Custodians of the Sword have devoted their lives to guard the infamous blade that imprisons the Evil One. However, in the end, they could not prevent the foul relic from being stolen by those who wished to liberate the beast. After recovering the sword, the foolish Custodian submitted to its tempting whispers, which promised a life of glory and power.",
+gear:[{name:'Oggol, the Cursed Blade',desc:"The blade is now an extension of himself. It bleeds and pulses like his own flesh, constantly trying to exert its will over the Custodians. d12 magic damage + infection."},{name:'Broken Oath',desc:"A damaged emblem; a symbol of his conviction. If it were to be lost, his mind and body would surrender completely to the blade."}]},
+{id:'pale-sun-knight',name:'The Pale Sun Knight',rec:{STR:4,INT:2,FAI:5,WIL:3},cast:null,
+desc:"Covered with prickly armors, the faithful servants of the Undying Sun strike fear among the blasphemous and blindly obey the will of the Solar Deacons. Staring at the heretics whose newborn he was tasked to execute, the Knight found himself split between his duty and his morals. For the first time, he questioned his previous acts and the holiness of the Deacons.",
+gear:[{name:'Blade of Solstice',desc:"A holy weapon used to punish those who act against the Undying Sun. Its virtuous blade must be cleaned after each execution. d10 damage."}]},
+{id:'lorekeeper-num',name:'The Lorekeeper of Num',rec:{STR:0,INT:5,FAI:0,WIL:5},cast:{ability:'INT',count:4},
+desc:"The Library of Num holds the largest trove of information in the known world. Years of careful gathering and cataloging have been spent in order to build this hope for the future of mankind. Few are the tomes and scrolls in Num that the Lorekeepers have not memorized yet. When he came across that codex of dark writings, he instantly knew that he was holding a weapon of immeasurable power. His three questing brothers wanted to take the book back to the Library, for every tome is sacred, but he knew that every trace of those vile inscriptions had to be erased from existence, even if that meant ending his brothers' lives since they had already memorized part of the book.",
+gear:[{name:'Library Light',desc:"A staff carried by all Lorekeepers. It can be used to cast spells, but due to the non-violent nature of their wielders, they are mainly used for reading in the dark. Spellcasting — intelligence. 4 spells."},{name:'Eye of Dorvus',desc:"A well-polished sheet of a translucent magic gemstone. If it is held against a piece of text, the reader will see said text in their mother tongue."}]},
+{id:'parasitic-mage',name:'The Parasitic Mage',rec:{STR:1,INT:1,FAI:1,WIL:1},cast:null,
+desc:"Parasitic mages slither among shadows, feeding on snails and slugs, longing for a life of ostentatious luxuries and comfort. As soon as they lay their slimy eyes on a life they desire, they do not hesitate to take it for themselves. They strike at the perfect moment and supplant the individual, no matter if they are infant, a maiden, or a duke. Some of them have lived the life of a person from cradle to grave without ever being discovered before moving on to their next life.",
+gear:[{name:"Liar's Scepter",desc:"A fragile mother-of-pearl scepter used by parasitic mages to change their shape. If it is lost, a new one can be made within a few months. d6 damage."},{name:"Dreamer's Dew",desc:"A shell containing a powerful slumbering poison used before taking over a victim's appearance."}]},
+{id:'vengeful-soul',name:'The Vengeful Soul',rec:{STR:4,INT:1,FAI:0,WIL:5},cast:null,
+desc:"A queen ill with white hives gave birth to her second son. While her firstborn was a healthy boy full of life, the younger of the two was weak, scrawny, and constantly afflicted by illnesses. He grew up with a blood-boiling hatred for his brother. The day that his brother was crowned king, the prince sneaked into his bedchamber and tried to murder him. However, it was the older brother who accidentally ended the covetous prince's life. Such was the fury of the fallen prince, that he came back from the dead with an insatiable thirst for vengeance.",
+gear:[{name:'Royal Sword',desc:"An opulent sword belonging to his brother, worthy of being wielded only by a King. d8 damage."},{name:'Accursed Flesh',desc:"The child of a woman afflicted with white hives receives the blessing of Ketereth, god of wrath and putrefaction."}]},
+{id:'broken-heart',name:'The Broken Heart',rec:{STR:3,INT:0,FAI:3,WIL:1},cast:null,
+desc:"The light of his beloved dwindled with each day that passed. After hearing of a mysterious fountain whose waters were capable of curing all ills, he traveled to the remotest places in search of the cure, devoting his life to his quest, never losing hope. Yet, by the time he came back victorious in his mission, it was too late. So devastating was the loss that it led him to madness.",
+gear:[{name:'Last Hope',desc:"It heals its wearer of any affliction and can emit a bright light that obliterates evil. It has enough magic left for one last use."},{name:'Opal Kiss',desc:"A ring from his beloved. It envelops him in a soft warmth."}]},
+{id:'pond-knight',name:'Pond Knight',rec:{STR:3,INT:2,FAI:3,WIL:4},cast:{ability:'FAI',count:1},
+desc:"Dexterous warrior from the Puddled Lands. Having trained under extreme sensory deprivation, he can perceive his surroundings through water ripples. The Pond Knights are part of an elite dedicated to the protection of the Tree of Fiddith. The water that half-fills the helmet of a Pond Knight serves as their guide, for these warriors have honed an aquatic sense and can feel and interpret the water vibrations created by their surroundings. They can detect an approaching enemy from far away, but only for as long as they are on the same ground as them.",
+gear:[{name:'Drowned Shield',desc:"A porous-stone shield that constantly weeps water, especially the closer it gets to a body of fresh water."},{name:'Flower of Fiddith',desc:"A fetish carved from the Tree of Fiddith. It emits a motherly and comforting aura that can calm the surface of any freshwater body it is placed on, making it as smooth as a mirror. Spellcasting — faith. 1 spell."},{name:'Rusted Sabre',desc:"Short blade kept in water as to keep the rust fresh. d8 damage."}]},
+{id:'flesh-eater',name:'Flesh Eater',rec:{STR:3,INT:1,FAI:0,WIL:1},cast:null,
+desc:"A being that rejoices in the suffering of others and delights its palate with human flesh. Humanity was stripped from it and many others of its kind. Having been treated like and trained as a faulty beast since birth, it embraced this and distanced itself from humans. These vicious individuals find great joy in the most vile forms of torture. They devour their captives slowly, cauterizing their wounds to make sure they stay alive for as long as possible.",
+gear:[{name:"Butcher's Kiss",desc:"A grimy and rusty mace to flay the skin, crush the bone, and tender the meat. d10 damage."},{name:'Tongue Cage',desc:"A brass sheath is nailed to the tongue of a flesh eater to prevent it from talking. Small orifices allows passage of fluids so as not to deprive it of tasting its victims."}]},
+{id:'son-thunder',name:'Son of the Thunder',rec:{STR:2,INT:4,FAI:5,WIL:2},cast:{ability:'FAI',count:4},
+desc:"Erudite of the natural forces. He channels the immense power of the storms through his body. The Sons of the Thunder are forged by the faith and teachings of the Father of Light, a higher being believed to control the heavens and all that comes from them. The Sons of the Thunder can invoke devastating thunderstorms through a rigorous channeling ritual. For days on end, they stay completely still with both arms wide open, calling the storm until they hear its reply. Their copper robes and helmets let electricity flow through their bodies and allow them to control it with ease.",
+gear:[{name:'Storm Weaver',desc:"A light copper staff that can guide, absorb, and shoot lightning bolts. While charged, it can electrocute enemies with a mere touch. d8 magic damage. Spellcasting — faith. 4 spells."},{name:'Supplicant Finger',desc:"A copper rod capable of attracting and storing lightning. They are often left half-buried in high places and collected after a storm has passed through the area."}]},
+{id:'blackbone-walker',name:'Blackbone Walker',rec:{STR:4,INT:3,FAI:2,WIL:0},cast:null,
+desc:"Old guardian of a fallen fort, wanders without direction. An angry and stealthy warrior who excels at laying ambushes. During their glory days, the Blackbone Spears were feared by nearby kingdoms, for they were believed to be responsible for the assassinations of important figures. After the great Blackbone Fort fell along with its lord, the Blackbone Spears who survived the massacre lost all will and reason for being, since serving and protecting their master had been their sole goal since childhood.",
+gear:[{name:'Blackbone Spear',desc:"A spear of blackbone, a material extracted from the charred bones of an old god. It is extremely durable and lights ablaze if it is struck against rock or metal. d6 damage + d4 fire damage."},{name:'Blackbone Ash',desc:"A belt pouch that contains some of the incinerated ashes of an old god. This dust absorbs so much light that it can perfectly blend with the shadows around them."}]},
+{id:'wax-warlock',name:'Wax Warlock',rec:{STR:0,INT:6,FAI:1,WIL:2},cast:{ability:'INT',count:5},
+desc:"A bottomless well of knowledge in many sorceries, such as enchantments, invocations, and pyromancies. Despite their overwhelming power, the Wax Warlocks are frail elderly beings, only shielded by their wax mantle. The Wax Warlocks' hunger for the occult is legendary. They are able to effortlessly memorize endless spells thanks to their second skin, making them living libraries. The rare wax that coats their heads was rendered from the fat of the Fallen Giant in days of old. It melts at such a slow pace that its decay is imperceptible to mortal eyes.",
+gear:[{name:'Golden Wax',desc:"A thick stone-like layer of wax that prevents memories from escaping the head it covers."},{name:'Candle Staff',desc:"A wax-coated staff tipped with a candle that can be lit or snuffed by thought alone. Neither breeze nor gale can extinguish its flame, making it very useful for casting. Spellcasting — intelligence. 5 spells."}]},
+{id:'tortured-beast',name:'Tortured Beast',rec:{STR:6,INT:3,FAI:0,WIL:0},cast:null,
+desc:"A pitiful soul condemned to an eternal fight against his most primal instincts. Under the yoke of his curse, he has devoured all whom he loved, yet his thirst is far from quenched. As he roams the streets, a scratch is all it takes to stir the desire for blood. “O, please... I beg thee... show some mercy... for once I was like thee. I wished not for this life...” Tears trickle down the beast's muzzle as it tears into the silky skin of the maiden. With each bitter gulp of blood, the implacable beast is further calmed. Soon, it sinks into slumber once more, freeing the man who lies within it – confined behind sharp fangs and dark fur.",
+gear:[{name:'Curse of the Beast',desc:"A curse of eternal hunger that only human flesh can sate. It transforms its bearer into a bloodthirsty beast that always succumbs to its grotesque desire. d10 damage + bleeding."},{name:"Beast's Rosary",desc:"A bundle of rags from the clothes of the beast's victims, a collection of memories kept as a futile act of atonement."}]},
+{id:'wood-witch',name:'Wood Witch',rec:{STR:0,INT:3,FAI:5,WIL:2},cast:{ability:'FAI',count:3},
+desc:"Unlike their malevolent distant kin, these sylvan hags hold on to their humanity, since they refuse to partake of the flesh of infants. Despite this, they too are persecuted and hunted in just the same fashion. Akin to the followers of Murgo, the Seed God, wood witches hold green baptisms, tortuous rituals by which the souls of witchlings become permanently entangled with the forest's life force. Despite what it might seem, wood witches are neither true disciples of Murgo nor real witches. They walk a thin line, flirting with both the powers of nature and devilry.",
+gear:[{name:'Witch Visage',desc:"A handcrafted mask in the likeness of a true witch, a garment used to infiltrate covens and attend sabbaths. Spellcasting — faith. 3 spells."},{name:'Mandrake Root',desc:"The grotesquely humanoid root of a wicked magical plant. It will scream in agony if bitten into, causing those who hear it to shudder in fear. If it is placed in a cradle, it will slowly morph into the form of a newborn, a trick used by true witches to discreetly snatch their next meal."}]},
+{id:'testament-knight',name:'Testament Knight',rec:{STR:5,INT:1,FAI:3,WIL:6},cast:null,
+desc:"A bodyguard whose devotion knows no bounds. He bears the weight of his master's death both in his mind and on his shoulders, carrying his grave in perpetual mourning while he awaits the day when he can serve him once more. He has crossed through countless lands and battlefields in search of a cure for his liege. Despite his fruitless endeavors, his will has never wavered. “I feel thy tender presence beneath the stone, my lord... thy regal gaze following mine every step.” “Never shall I leave thee behind... If my fate truly is to forever carry a noble figure, I shall call myself blessed.” “Can thou hear me, my lord? I beg thee... grant me just a few more of your words...”",
+gear:[{name:"Liege's Deathbed",desc:"A large flat stone upon which lies a petrified body frozen in eternal beauty. He holds a dagger firmly. d10 damage."},{name:'Basilisk Tears',desc:"The bottled tears of a baleful beast said to possess depetrifying properties. In truth, they are a deadly poison."}]},
+{id:'green-sun-swordsman',name:'Green Sun Swordsman',rec:{STR:3,INT:1,FAI:2,WIL:5},cast:null,
+desc:"A goblin of unheard-of prowess and discipline. The very qualities that are oh-so lacking among his kin. Blessed by their beloved lady and mentor, the Green Sun Swordsmen played a key role in the fall of a tyrannical reign. Great honors and responsibilities were bestowed upon those who survived the ordeal. The goblins with the tenacity to fight against their cowardly nature and the will and skill to become masters of the blade were awarded the title of Green Sun Swordsman – a distinction only few achieved. After their last battle, these valiant were proud to be the aegis of the new kingdom.",
+gear:[{name:'Honor Restraint',desc:"A small yet heavy medal of green lead, a reminder. Renouncing it would invite savagery into its former wearer."},{name:'Wishing Pot',desc:"A stone vessel plastered with runes, a miniature version of the Great Well of the Kingdom. It is believed that wishes that are successfully tossed into it will be granted. It is customary to use it before battle."},{name:'Green Needle',desc:"Green lead sword, used to knight the goblin, hard to wield by any other than the Swordsman. d8 damage."}]},
+{id:'foul-soul',name:'Foul Soul',rec:{STR:3,INT:2,FAI:0,WIL:3},cast:null,
+desc:"A former conscript condemned to the Hole, forever lost among its filthy walls. Broken are those who unearth from the sick belows, now beasts among men. Driven by primal desires, they prowl free under the veil of night. Deep underground, where neither light nor law is welcome, are cast the prisoners of the Capital. Abandoned to their luck, they roam the forlorn tunnels of a hypogean city. Blood, death, and decay have twisted the minds of all who here dwell, turning them into unholy prisoners of instinct.",
+gear:[{name:'Fetio Doll',desc:"Crafted out of small bones and tufts of hair, this doll brings solace to a broken soul but malaise to all others. Those who stay close to it will grow weak with illness. + poisoned."},{name:'Scrap Knife',desc:"Rusted shard of metal thrown away, leather wrapped to become usable as a knife. d6 damage."}]},
+{id:'choirman',name:'Choirman',rec:{STR:1,INT:4,FAI:6,WIL:1},cast:{ability:'FAI',count:3},
+desc:"Preacher of the word of Dorvus who has transcended humanity to better serve its faith. The Choirmen dwell in monasteries, where their main task is to teach the holy writings to neophytes. They also often visit the churches of Dorvus to officiate sacred ceremonies. In recognition of their eternal devotion, the Choirmen of Dorvus have been blessed with their choral voices. It is said of the songs of the Choirmen that they speak directly to the souls of men. Few have experienced the most acrid of their tunes, however, for they are reserved for their foes and only to be sung in moments of desperation.",
+gear:[{name:'The Word of Dorvus',desc:"A transcription of the holy book that arranges the spoken teachings of the God of Truth. Within it lies the music that the Choirmen recite to Dorvus and indoctrinate the masses."},{name:'Blessed Censer',desc:"A heavy incensory used in rituals of purification, filled with mind-muddling herbs that ease the way for the songs of the Choirmen. It can double as a flail if words fail to convince. d6 damage. Spellcasting — faith. 3 spells."}]},
+{id:'bellmage',name:'Bellmage',rec:{STR:2,INT:5,FAI:1,WIL:3},cast:{ability:'INT',count:0,note:'No spells, just illusions.'},
+desc:"A court illusionist, an enchanter that displays his glamours for the delight of the nobility. Throughout history, amid applause and laughter, many of these dazzling tricksters have covertly influenced the judgement of the elite, guiding their decisions to benefit their own interests. A bellmage's magic is that of the senses. As performers, they mostly use it to enhance their stories – songs from faraway lands and smells and taste delicacies that they will crave for the rest of their lives.",
+gear:[{name:'Illusionary Bell',desc:"A tool of deceit. Those who hear it fall deep into the illusory narrative woven by the bellmages. A second ring frees them from the spell. Spellcasting — intelligence. No spells, just illusions."},{name:'Sensory Masks',desc:"A set of iron masks that fit around the neckpiece worn by the bellmages. Each one of them represents a different sense and allows its wearer to create illusions based on that sense. Wearing fewer masks allows the bellmages to focus on specific senses, resulting in more powerful illusions."}]},
+{id:'marionettist',name:'Marionettist',rec:{STR:1,INT:4,FAI:1,WIL:3},cast:{ability:'INT',count:1},
+desc:"An artisan & enchanter who bestows life upon creations. Masters of manipulation, marionettists craft effigies that obey their every command. However, there exists a limit to their abilities, for they must remain concentrated in order to control their puppets. Tales speak of great marionettists of legend capable of commanding entire armies. Many marionettists bond their puppets to certain individuals in order to mimic their skills and mannerisms. Some even go as far as to dabble in the art of illusionism to grant their puppets an actual semblance of life, often to deceive. In the hands of a master, a puppet can become a deadly warrior, a dexterous thief, or even a passionate lover.",
+gear:[{name:'Wooden Sibling',desc:"A ligneous twin crafted in the likeness of life. Within it lies a bone of its master, allowing them to share their eyes and ears. It obeys any written orders that are inserted in it."},{name:'Mocking Heart',desc:"An affront to humanity and the first step toward perpetual pseudo-life. Spellcasting — intelligence. 1 spell."}]},
+{id:'prisoner',name:'Prisoner',rec:{STR:1,INT:1,FAI:1,WIL:1},cast:null,
+desc:"An old captive who has found freedom within the confines of his prison. While most abide by the law of many and are trapped in the prisons of their minds, there are a rare few who are the true owners of their fate. For these individuals, reality itself is a construct of man, a fickle thing that perspective can bend. Within the confines of a cage, one can become the only free person in the world, while all the others rot behind bars.",
+gear:[{name:'Cage',desc:"The entire world fits within it."}]},
+{id:'plague-missionary',name:'Plague Missionary',rec:{STR:0,INT:2,FAI:5,WIL:5},cast:{ability:'FAI',count:2},
+desc:"A necrotic apostle who wishes to share with all the gift that has been bestowed upon him. The Plague Missionaries come from Greemen, a vile village tainted by an ancient disease that, in despair, many ended up revering as holy. Invisibly and silently, the foul influence of Greemen spreads far and wide across the land thanks to its devout missionaries, who consecrate their lives to the eternal pilgrimage. Many times throughout history has ruin befallen the cursed village, brought by the hand of those who have attempted to eradicate its malady once it became clear to them that no cure would ever be found – yet the walls of Greemen are always rebuilt. Twisted and scarred, the village now resembles those who in it dwell.",
+gear:[{name:'Maggot Bag',desc:"A bag of infected larvae to spoil food and water. For the people of Greemen, no nourishment can be found in unrotten victuals. Spellcasting — faith. 2 spells."},{name:'Calamity Jar',desc:"A large clay urn, firmly sealed, for the gift of Greemen lies within it. Uncorking the jar unleashes the Plague, laying waste to all around it. Once emptied, it must be refilled at Greemen."}]}
+];
+
+/* ============ STATE ============ */
+const STAT_MAX=6;
+function defaultState(){return{name:'',classId:null,god:null,journey:'',notes:'',
+ statVals:{STR:0,INT:0,FAI:0,WIL:0},
+ cur:{hp:1,sta:0,kn:0,ess:0,mana:0},armorMax:0,armorCur:0,
+ spells:[],inv:[],slotsMax:4,food:0,t1:null,t2:null,baseApplied:false};}
+let S=defaultState();
+try{const raw=localStorage.getItem(KEY);
+ if(raw){const p=JSON.parse(raw);S=Object.assign(defaultState(),p);
+  if(p.statVals===undefined&&p.stats){ // migrate very old box-based saves
+   STATS.forEach(st=>{S.statVals[st]=(p.stats[st]||[]).reduce((a,r)=>a+r.filter(Boolean).length,0);});}}}catch(e){}
+let uidc=1;const uid=()=>'i'+(uidc++)+Date.now().toString(36);
+const save=()=>localStorage.setItem(KEY,JSON.stringify(S));
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $=s=>document.querySelector(s);
+const curClass=()=>CLASSES.find(c=>c.id===S.classId)||null;
+const statVal=st=>S.statVals[st];
+function recStats(c){const r={};STATS.forEach(st=>{r[st]=(c&&c.rec)?c.rec[st]:0;});return r;}
+const abilityName=a=>a==='INT'?'Intelligence':'Faith';
+const spellById=id=>SPELLS.find(s=>s.id===id);
+function maxes(){const v={STR:statVal('STR'),INT:statVal('INT'),FAI:statVal('FAI'),WIL:statVal('WIL')};
+ const c=curClass();const caster=!!(c&&c.cast);
+ return{hp:Math.max(1,v.STR+v.WIL),sta:v.WIL,kn:v.INT,ess:v.FAI,mana:caster?Math.max(v.INT,v.FAI):0};}
+function clampBars(){const m=maxes();['hp','sta','kn','ess','mana'].forEach(k=>{S.cur[k]=Math.min(Math.max(0,S.cur[k]||0),m[k]);});
+ S.armorCur=Math.min(Math.max(0,S.armorCur||0),S.armorMax);}
+const slotsUsed=()=>S.inv.filter(i=>!i.worn&&!i.neg).length;
+
+/* ============ ACTIONS ============ */
+function bumpStat(st,d){S.statVals[st]=Math.min(STAT_MAX,Math.max(0,S.statVals[st]+d));clampBars();save();renderStats();renderSheet();renderStrip();}
+function setStat(st,v){S.statVals[st]=Math.min(STAT_MAX,Math.max(0,v));clampBars();save();renderStats();renderSheet();renderStrip();}
+function applyRecommended(){const rec=recStats(curClass());STATS.forEach(st=>{S.statVals[st]=rec[st];});clampBars();save();renderStats();renderSheet();renderStrip();}
+function selectClass(id){
+ if(S.classId===id)return;
+ S.classId=id;const c=curClass();
+ const rec=recStats(c);STATS.forEach(st=>{S.statVals[st]=rec[st];});
+ S.spells=(c.cast&&c.cast.fixed)?[...c.cast.fixed]:[];
+ S.inv=S.inv.filter(i=>i.source!=='class');
+ c.gear.forEach(g=>S.inv.push({uid:uid(),name:g.name,desc:g.desc,worn:false,neg:false,armor:false,source:'class'}));
+ if(!S.baseApplied){S.baseApplied=true;
+  S.inv.push({uid:uid(),name:'Waterskin',desc:'',worn:false,neg:false,armor:false,source:'base'});
+  S.food=1+Math.floor(Math.random()*4);
+  S.inv.push({uid:uid(),name:foodName(),desc:'d4 days worth of food',worn:false,neg:false,armor:false,source:'food'});}
+ const m=maxes();S.cur={hp:m.hp,sta:m.sta,kn:m.kn,ess:m.ess,mana:m.mana};
+ save();renderAll();
+}
+function getCur(k){return k==='armor'?S.armorCur:S.cur[k];}
+function setCurVal(k,v){if(k==='armor')S.armorCur=v;else S.cur[k]=v;}
+function clickBar(k,i){setCurVal(k,getCur(k)===i?i-1:i);save();renderStats();renderSheet();renderStrip();}
+function bumpArmor(d){S.armorMax=Math.max(0,S.armorMax+d);clampBars();save();renderStats();renderSheet();renderStrip();}
+function bumpSlots(d){S.slotsMax=Math.min(20,Math.max(1,S.slotsMax+d));save();renderInv();renderStrip();renderSheet();}
+function pickGod(id){S.god=id;save();renderGod();renderSheet();}
+function toggleSpell(id){const c=curClass();if(!c||!c.cast||c.cast.note)return;
+ const fixed=c.cast.fixed||[];
+ if(S.spells.includes(id)){S.spells=S.spells.filter(x=>x!==id);}
+ else{const chosen=S.spells.filter(x=>!fixed.includes(x)).length;if(chosen>=c.cast.count)return;S.spells.push(id);}
+ save();renderSpells();renderSheet();}
+function foodName(){return 'Food — '+S.food+' day'+(S.food===1?'':'s');}
+function syncFood(){const it=S.inv.find(i=>i.source==='food');if(it)it.name=foodName();}
+function rollFood(){S.food=1+Math.floor(Math.random()*4);syncFood();save();renderInv();renderSheet();}
+function applyTable(n,idx){S['t'+n]=idx;S.inv=S.inv.filter(i=>i.source!=='t'+n);
+ if(idx!=null)S.inv.push({uid:uid(),name:(n===1?TABLE1:TABLE2)[idx],desc:'Starting gear table '+(n===1?'I':'II')+' — roll '+(idx+1),worn:false,neg:false,armor:false,source:'t'+n});
+ save();renderInv();renderStrip();renderSheet();}
+function rollTable(n){applyTable(n,Math.floor(Math.random()*12));}
+function pickTable(n,v){applyTable(n,v===''?null:parseInt(v,10));}
+function flag(u,f){const it=S.inv.find(i=>i.uid===u);if(it){it[f]=!it[f];save();renderInv();renderStrip();renderSheet();}}
+function delItem(u){S.inv=S.inv.filter(i=>i.uid!==u);save();renderInv();renderStrip();renderSheet();}
+function addItem(){const n=$('#newName').value.trim(),d=$('#newDesc').value.trim();
+ if(!n)return;S.inv.push({uid:uid(),name:n,desc:d,worn:false,neg:false,armor:false,source:'custom'});
+ $('#newName').value='';$('#newDesc').value='';save();renderInv();renderStrip();renderSheet();}
+function printSheet(){renderSheet();window.print();}
+function exportJSON(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(S.name||'character')+'.json';a.click();URL.revokeObjectURL(a.href);}
+function importJSON(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{S=Object.assign(defaultState(),JSON.parse(r.result));clampBars();save();renderAll();}catch(e){alert('Could not read that file.');}};
+ r.readAsText(f);inp.value='';}
+function resetAll(){if(!confirm('Clear this character and start over?'))return;S=defaultState();save();renderAll();}
+function doRoll(){const mode=$('#rollMode').value,bonus=parseInt($('#rollBonus').value||'0',10);
+ const d12=()=>1+Math.floor(Math.random()*12);
+ let a=d12(),b=null,base=a,notes=[];
+ if(mode==='a'||mode==='d'){b=d12();base=(mode==='a'?Math.max:Math.min)(a,b);notes.push(mode==='a'?'advantage — took higher':'disadvantage — took lower');}
+ let total=base;
+ if(base===12){const e=d12();total+=e;notes.push('landed on 12 — rolled again and added '+e);}
+ if(base===1){const e=d12();total-=e;notes.push('landed on 1 — rolled again and subtracted '+e);}
+ total+=bonus;
+ $('#rollOut').innerHTML='<b>RESULT: '+total+'</b> <span class="small">(die '+a+(b!==null?' / '+b:'')+(bonus?' '+(bonus>=0?'+':'')+bonus:'')+(notes.length?' — '+notes.join('; '):'')+')</span>';}
+
+/* ============ RENDER ============ */
+function miniBoxes(n,on){let h='';for(let i=0;i<n;i++)h+='<span class="boxs'+(on&&on[i]?' on':'')+'"></span>';return h;}
+function barBlock(label,key,max){const cur=getCur(key);let boxes='';
+ for(let i=1;i<=max;i++)boxes+='<button class="box'+(i<=cur?' on':'')+'" onclick="clickBar(\''+key+'\','+i+')"></button>';
+ return '<div class="barline"><span class="barlabel">'+label+'</span>'+boxes+' <span class="small">'+cur+'/'+max+'</span></div>';}
+function trackerOnly(key,max,cur){let h='';for(let i=1;i<=max;i++)h+='<button class="box'+(i<=cur?' on':'')+'" onclick="clickBar(\''+key+'\','+i+')"></button>';return h+' <span class="small">'+cur+'/'+max+'</span>';}
+function tableSelect(n){const cur=S['t'+n];let h='<select onchange="pickTable('+n+',this.value)"><option value="">— choose —</option>';
+ (n===1?TABLE1:TABLE2).forEach((t,i)=>{h+='<option value="'+i+'"'+(cur===i?' selected':'')+'>'+(i+1)+'. '+esc(t)+'</option>';});
+ return h+'</select>'+(cur!=null?' <span class="small">→ '+esc((n===1?TABLE1:TABLE2)[cur])+'</span>':'');}
+
+function renderClass(){
+ $('#classList').innerHTML=CLASSES.map(c=>'<button class="btn'+(S.classId===c.id?' sel':'')+'" onclick="selectClass(\''+c.id+'\')">'+esc(c.name)+'</button>').join('');
+ const det=$('#classDetail'),c=curClass();
+ if(!c){det.innerHTML='<p class="small">Select a class to see its description, recommended stats, and starting gear. Selecting a class grants its starting equipment and applies its recommended stats.</p>';return;}
+ let statsHtml='';STATS.forEach(st=>{const r=c.rec[st];
+  statsHtml+='<div class="barline"><span class="barlabel">'+st+'</span>'+miniBoxes(STAT_MAX,Array(STAT_MAX).fill(false).map((_,i)=>i<r))+' <b>'+r+'</b></div>';});
+ let castHtml='No spellcasting.';
+ if(c.cast){ if(c.cast.note)castHtml='Spellcasting — '+abilityName(c.cast.ability)+'. '+c.cast.note;
+  else castHtml='Spellcasting — '+abilityName(c.cast.ability)+'. '+c.cast.count+' spell'+(c.cast.count!==1?'s':'')+
+   ((c.cast.fixed&&c.cast.fixed.length)?' + '+c.cast.fixed.map(f=>spellById(f).name).join(', '):'')+'. Mana bar = higher of Intelligence or Faith.';}
+ det.innerHTML='<h2>'+esc(c.name)+'</h2><p class="small">'+esc(c.desc)+'</p>'
+ +'<h3>Class Stats</h3>'+statsHtml
+ +'<h3>Starting gear</h3><ul>'+c.gear.map(g=>'<li><b>'+esc(g.name)+'</b> — <span class="small">'+esc(g.desc)+'</span></li>').join('')+'</ul>'
+ +'<h3>Spellcasting</h3><p class="small">'+castHtml+'</p>'
+ +'<h3>Journey</h3><p class="small">You also choose a journey when you begin. This represents the purpose of your soul. Most classes have one predetermined, but you are always welcome to make your own.</p>'
+ +'<textarea id="journey" rows="2" style="width:100%">'+esc(S.journey)+'</textarea>';
+ $('#journey').addEventListener('input',e=>{S.journey=e.target.value;save();renderSheet();});
+}
+
+function renderStats(){
+ const el=$('#statsArea');const c=curClass();const rec=recStats(c);
+ let html='<div class="panel"><button class="btn" onclick="applyRecommended()">Apply recommended stats</button> '
+  +'<span class="small">Sets all four stats to the '+(c?esc(c.name):'class')+' recommendation.</span></div>';
+ STATS.forEach(st=>{const v=statVal(st),r=rec[st];
+  html+='<div class="panel"><h2>'+STATNAMES[st]+' ('+st+')</h2>'
+   +'<div class="barline"><span class="barlabel">Value</span>'
+   +'<button class="btn" onclick="bumpStat(\''+st+'\',-1)">−</button> '
+   +'<b style="font-size:16px">'+v+'</b> '
+   +'<button class="btn" onclick="bumpStat(\''+st+'\',1)">+</button>'
+   +' <span class="small">(0–'+STAT_MAX+')</span></div>'
+   +'<div class="barline"><span class="barlabel">Recommended</span><b>'+r+'</b> '
+   +(v!==r?'<button class="btn" onclick="setStat(\''+st+'\','+r+')">Set</button>':'<span class="small">✓</span>')
+   +'</div></div>';});
+ const m=maxes();clampBars();
+ html+='<div class="panel"><h2>Bars</h2>';
+ html+=barBlock('Health · STR+WIL, min 1','hp',m.hp);
+ html+=barBlock('Stamina · WIL','sta',m.sta);
+ html+=barBlock('Knowledge · INT','kn',m.kn);
+ html+=barBlock('Essence · FAI','ess',m.ess);
+ if(c&&c.cast)html+=barBlock('Mana · higher of INT/FAI','mana',m.mana);
+ html+='<div class="barline" style="margin-top:10px"><span class="barlabel">Armor quality</span>'
+  +'<button class="btn" onclick="bumpArmor(-1)">−</button> max '+S.armorMax+' <button class="btn" onclick="bumpArmor(1)">+</button> ';
+ html+=S.armorMax>0?trackerOnly('armor',S.armorMax,S.armorCur):'<span class="small">— if you are wearing armor (mark an item ARMOR in Inventory), set its quality here; spend 1 point to halve incoming damage</span>';
+ html+='</div></div>';
+ html+='<div class="panel"><h2>Bar rules — what points are spent on</h2><ul class="small">'
+ +'<li><b>Health</b> — Each time you are hit, you decrease your health by the damage dealt, and upon reaching zero, you may take one last action, before you die.</li>'
+ +'<li><b>Stamina</b> — One Stamina can be used to dodge an incoming attack. You may also spend a stamina to take a second action on your turn.</li>'
+ +'<li><b>Armor quality</b> — If you are wearing armor, you can spend one point to halve incoming damage.</li>'
+ +'<li><b>Knowledge</b> — One Knowledge can be used to remember fragments of memories, giving you insight into information on a subject.</li>'
+ +'<li><b>Essence</b> — Essence can be used to grant advantage on your next roll.</li>'
+ +'<li><b>Mana</b> — Mana can be used to cast spells. You choose which spells you have at creation.</li>'
+ +'</ul>'
+ +'<p class="small" style="margin-top:6px">If you fail an attempt, you gain a point to the corresponding bar. On a successful physical attack, you regain a point to a bar of your choice. In order to regain health, you must not do any strenuous activity for 12 hours, after which you regain 1d6 health, armor, or bar points (of your choice).</p></div>';
+ el.innerHTML=html;
+}
+
+function renderGod(){
+ $('#godList').innerHTML=GODS.map(g=>'<div class="godcard'+(S.god===g.id?' sel':'')+'" onclick="pickGod(\''+g.id+'\')">'
+ +'<b>'+esc(g.name)+'</b>'+(g.title?' <span class="small">'+esc(g.title)+'</span>':'')
+ +(g.text?'<p class="small" style="margin-top:4px">'+esc(g.text)+'</p>':'')+'</div>').join('');
+}
+
+function renderSpells(){
+ const el=$('#spellArea'),c=curClass();
+ if(!c){el.innerHTML='<div class="panel"><p>Select a class first.</p></div>';return;}
+ if(!c.cast){el.innerHTML='<div class="panel"><h2>Spells</h2><p>'+esc(c.name)+' has no spellcasting.</p><p class="small" style="margin-top:6px">Spellcasting Classes have a Mana bar equal to either intelligence or faith, whichever is higher. Mana can be used to cast spells. You choose which spells you have at creation.</p></div>';return;}
+ let html='<div class="panel"><h2>Spellcasting — '+abilityName(c.cast.ability)+'</h2>';
+ if(c.cast.note){html+='<p>'+esc(c.cast.note)+'</p><p class="small" style="margin-top:6px">Mana bar: '+maxes().mana+'</p></div>';el.innerHTML=html;return;}
+ const fixed=c.cast.fixed||[];
+ const chosen=S.spells.filter(id=>!fixed.includes(id)).length;
+ html+='<p>Choose '+c.cast.count+' spell'+(c.cast.count!==1?'s':'')+' — chosen '+chosen+'/'+c.cast.count
+ +(fixed.length?' · Granted: '+fixed.map(f=>spellById(f).name).join(', '):'')+'</p>'
+ +'<p class="small">Mana bar (higher of Intelligence or Faith): '+maxes().mana+'</p></div>';
+ html+=SPELLS.map(sp=>{const isF=fixed.includes(sp.id),picked=S.spells.includes(sp.id);
+  return '<div class="spellcard'+(picked?' picked':'')+(isF?' fixed':'')+'" '+(isF?'':'onclick="toggleSpell(\''+sp.id+'\')"')+'>'
+  +'<b>'+sp.name+'</b> '+'✦'.repeat(sp.cost)+(isF?' — GRANTED':'')+'<div class="small">'+sp.text+'</div></div>';}).join('');
+ el.innerHTML=html;
+}
+
+function itemHtml(it){
+ return '<div class="item"><div style="flex:1;min-width:220px"><b>'+esc(it.name)+'</b>'
+ +(it.desc?' <span class="small">'+esc(it.desc)+'</span>':'')
+ +'</div><div>'
+ +'<button class="btn'+(it.worn?' sel':'')+'" onclick="flag(\''+it.uid+'\',\'worn\')">worn</button> '
+ +'<button class="btn'+(it.neg?' sel':'')+'" onclick="flag(\''+it.uid+'\',\'neg\')">negligible</button> '
+ +'<button class="btn'+(it.armor?' sel':'')+'" onclick="flag(\''+it.uid+'\',\'armor\')">armor</button> '
+ +'<button class="btn" onclick="delItem(\''+it.uid+'\')">✕</button>'
+ +'</div></div>';}
+
+function renderInv(){
+ const el=$('#invArea'),used=slotsUsed();
+ let html='<div class="panel"><h2>Storage</h2>'
+ +'<p><span class="barlabel">Slots</span><button class="btn" onclick="bumpSlots(-1)">−</button> '+S.slotsMax+' <button class="btn" onclick="bumpSlots(1)">+</button> · used: '+used+(used>S.slotsMax?' — OVER CAPACITY':'')+'</p>'
+ +'<p class="small" style="margin-top:6px">You also have 4 slots of storage that can each hold an object of a reasonable weight. This storage can be increased by acquiring extra storage equipment. Worn items and items of negligible weight don\'t take up a slot.</p></div>';
+ html+='<div class="panel"><h2>Starting gear</h2>'
+ +'<p class="small">Along with the gear in your class, everyone starts with a waterskin, d4 days worth of food and items you roll for. Roll once per table:</p>'
+ +'<p style="margin-top:6px"><span class="barlabel">Food</span><button class="btn" onclick="rollFood()">roll d4</button> → '+(S.food||'—')+' day(s)</p>'
+ +'<p><span class="barlabel">Table I</span><button class="btn" onclick="rollTable(1)">roll d12</button> '+tableSelect(1)+'</p>'
+ +'<p><span class="barlabel">Table II</span><button class="btn" onclick="rollTable(2)">roll d12</button> '+tableSelect(2)+'</p></div>';
+ html+='<div class="panel"><h2>Add item</h2><div style="display:flex;gap:6px;flex-wrap:wrap">'
+ +'<input id="newName" placeholder="Item name" style="flex:1;min-width:160px">'
+ +'<input id="newDesc" placeholder="Description / damage / notes" style="flex:2;min-width:220px">'
+ +'<button class="btn" onclick="addItem()">Add</button></div></div>';
+ html+=S.inv.length?S.inv.map(itemHtml).join(''):'<div class="panel"><p>Inventory is empty — select a class to receive its starting gear.</p></div>';
+ el.innerHTML=html;
+}
+
+function renderSheet(){
+ const el=$('#sheetArea'),c=curClass(),g=GODS.find(x=>x.id===S.god),m=maxes();clampBars();
+ let html='<div class="panel"><h2>'+esc(S.name||'Unnamed')+'</h2>'
+ +'<p><b>Class:</b> '+(c?esc(c.name):'—')+' · <b>God:</b> '+(g?esc(g.name+(g.title?', '+g.title:'')):'—')+'</p>'
+ +'<p><b>Journey:</b> '+esc(S.journey||'—')+'</p></div>';
+ html+='<div class="panel"><h2>Stats</h2>';
+ STATS.forEach(st=>{const v=statVal(st);
+  html+='<div class="barline"><span class="barlabel">'+STATNAMES[st]+' — '+v+'</span>'+miniBoxes(STAT_MAX,Array(STAT_MAX).fill(false).map((_,i)=>i<v))+'</div>';});
+ html+='</div>';
+ html+='<div class="panel"><h2>Bars</h2>'
+ +barBlock('Health','hp',m.hp)
+ +barBlock('Stamina','sta',m.sta)
+ +barBlock('Knowledge','kn',m.kn)
+ +barBlock('Essence','ess',m.ess);
+ if(c&&c.cast)html+=barBlock('Mana','mana',m.mana);
+ if(S.armorMax>0)html+='<div class="barline"><span class="barlabel">Armor quality</span>'+trackerOnly('armor',S.armorMax,S.armorCur)+'</div>';
+ html+='</div>';
+ html+='<div class="panel"><h2>Spending bar points</h2><ul class="small">'
+ +'<li><b>Health</b> — Each time you are hit, you decrease your health by the damage dealt, and upon reaching zero, you may take one last action, before you die.</li>'
+ +'<li><b>Stamina</b> — One Stamina can be used to dodge an incoming attack. You may also spend a stamina to take a second action on your turn.</li>'
+ +'<li><b>Armor quality</b> — If you are wearing armor, you can spend one point to halve incoming damage.</li>'
+ +'<li><b>Knowledge</b> — One Knowledge can be used to remember fragments of memories, giving you insight into information on a subject.</li>'
+ +'<li><b>Essence</b> — Essence can be used to grant advantage on your next roll.</li>'
+ +'<li><b>Mana</b> — Mana can be used to cast spells.</li>'
+ +'</ul>'
+ +'<p class="small" style="margin-top:6px">If you fail an attempt, you gain a point to the corresponding bar. On a successful physical attack, you regain a point to a bar of your choice. In order to regain health, you must not do any strenuous activity for 12 hours, after which you regain 1d6 health, armor, or bar points (of your choice).</p></div>';
+ if(g&&g.text)html+='<div class="panel"><h2>Blessing — '+esc(g.name+(g.title?', '+g.title:''))+'</h2><p class="small">'+esc(g.text)+'</p></div>';
+ html+='<div class="panel"><h2>Spells</h2>';
+ if(!c||!c.cast)html+='<p class="small">None.</p>';
+ else if(c.cast.note)html+='<p class="small">'+esc(c.cast.note)+'</p>';
+ else{const fixed=(c.cast.fixed||[]);
+  html+=S.spells.length?S.spells.map(id=>{const sp=spellById(id);
+   return '<div class="spellentry"><b>'+(fixed.includes(id)?'✧ ':'')+esc(sp.name)+'</b> — '+'✦'.repeat(sp.cost)
+   +'<div class="small">'+esc(sp.text)+'</div></div>';}).join('')
+  :'<p class="small">None chosen yet.</p>';}
+ html+='</div>';
+ html+='<div class="panel"><h2>Inventory — slots '+slotsUsed()+'/'+S.slotsMax+'</h2>'
+ +(S.inv.length?S.inv.map(it=>'<p>'+(!it.worn&&!it.neg?'☐ ':'')+(it.worn?'[worn] ':'')+(it.neg?'[negligible] ':'')+(it.armor?'[armor] ':'')+'<b>'+esc(it.name)+'</b>'+(it.desc?' <span class="small">'+esc(it.desc)+'</span>':'')+'</p>').join(''):'<p class="small">Empty.</p>')
+ +'</div>';
+ html+='<div class="panel"><h2>Notes</h2><textarea id="notes" rows="4" style="width:100%">'+esc(S.notes)+'</textarea></div>';
+ el.innerHTML=html;
+ const nt=$('#notes');if(nt)nt.addEventListener('input',e=>{S.notes=e.target.value;save();});
+}
+
+function renderStrip(){const m=maxes();clampBars();const c=curClass();
+ $('#strip').innerHTML='<span>HP '+S.cur.hp+'/'+m.hp+'</span><span>STA '+S.cur.sta+'/'+m.sta+'</span>'
+ +'<span>KN '+S.cur.kn+'/'+m.kn+'</span><span>ESS '+S.cur.ess+'/'+m.ess+'</span>'
+ +((c&&c.cast)?'<span>MANA '+S.cur.mana+'/'+m.mana+'</span>':'')
+ +(S.armorMax>0?'<span>ARMOR '+S.armorCur+'/'+S.armorMax+'</span>':'')
+ +'<span>SLOTS '+slotsUsed()+'/'+S.slotsMax+'</span>';}
+
+function renderAll(){
+ $('#charName').value=S.name;
+ renderClass();renderStats();renderGod();renderSpells();renderInv();renderSheet();renderStrip();
+ $('#rt1').innerHTML='<ol>'+TABLE1.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>';
+ $('#rt2').innerHTML='<ol>'+TABLE2.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>';
+ $('#spellRef').innerHTML=SPELLS.map(sp=>'<p style="margin-bottom:6px"><b>'+sp.name+'</b> '+'✦'.repeat(sp.cost)+'<br><span class="small">'+sp.text+'</span></p>').join('');
+}
+
+/* ============ WIRING ============ */
+$('#charName').addEventListener('input',e=>{S.name=e.target.value;save();renderSheet();});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');
+ document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('show'));
+ $('#tab-'+b.dataset.tab).classList.add('show');
+ if(b.dataset.tab==='sheet')renderSheet();
+ window.scrollTo(0,0);});
+renderAll();
+</script>
+</body>
+</html>
