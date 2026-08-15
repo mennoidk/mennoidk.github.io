@@ -1,0 +1,8 @@
+--- .gitignore (原始)
+
+
++++ .gitignore (修改后)
+```
+# Backup files
+*.backup
+```
